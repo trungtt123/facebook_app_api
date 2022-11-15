@@ -25,6 +25,5 @@ yarn-error.log*
 /.ideal
 /files
 
-.env
 **package-lock.json
 .expo
