@@ -328,7 +328,7 @@ router.post('/get_post', async (req, res) => {
                     } : null,
                     author: post.author ? {
                         id: post.author._id,
-                        name: post.author.name ? post.author.name : null,
+                        username: post.author.name ? post.author.name : null,
                         avatar: post.author.avatar.url ? post.author.avatar.url : null
                     } : null,
                     state: post.status ? post.status : null,
