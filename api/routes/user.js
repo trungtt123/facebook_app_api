@@ -73,6 +73,7 @@ router.post ('/get_user_info', async (req, res) => {
     data.address = user.address;
     data.city = user.city;
     data.country = user.country;
+    data.birthday = validTime.timeToSecond(user.birthday);
     data.listing = user.friends.length;
     data.is_friend = false;
     if (tokenUser && user_id != tokenUser.id) {
@@ -87,7 +88,7 @@ router.post ('/get_user_info', async (req, res) => {
 
 var cpUpload = uploader.fields([{ name: 'avatar'}, { name: 'cover_image'}]);
 router.post('/set_user_info', cpUpload, verify, async (req, res) => {
-  let { username, description, address, city,country, link} = req.query;
+  let { username, description, address, city,country, link, birthday} = req.query;
   let fileAvatar, fileCoverImage, linkAvatar, linkCoverImage;
   let user, promise1, promise2, inputError;
   if (req.files){
@@ -188,6 +189,7 @@ router.post('/set_user_info', cpUpload, verify, async (req, res) => {
     if (link) user.link = link;
     if (linkAvatar) user.avatar= linkAvatar;
     if (linkCoverImage) user.coverImage= linkCoverImage;
+    if (birthday) user.birthday = birthday;
     try {
       user = await user.save();
     } catch (error) {

@@ -8,6 +8,7 @@ const {responseError, callRes} = require('./response/error');
 const app = express()
 
 // use express.json as middleware
+app.use('/public', express.static(__dirname + '/webview'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
@@ -20,6 +21,9 @@ mongoose.connect(url,
     .catch(err => console.log(`errors: ${err}`)
     );
 
+app.get('/it4788/finishedsignup', (req, res) => {
+    res.sendFile(__dirname + '/webview/finishSignup.html');
+});
 // use Routes
 app.use('/it4788/auth', require('./routes/auth'));
 app.use('/it4788/friend', require('./routes/friend'));

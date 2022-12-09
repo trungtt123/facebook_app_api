@@ -53,14 +53,14 @@ router.get('/verifyToken', verifyToken, async (req, res) => {
   }
 });
 router.post('/signup', async (req, res) => {
-  const { password } = req.query;
+  const { password, name, birthday } = req.query;
   let phoneNumber = req.query.phonenumber;
 
-  if (phoneNumber === undefined || password === undefined) {
-    return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, 'phoneNumber, password');
+  if (phoneNumber === undefined || password === undefined || name === undefined || birthday === undefined) {
+    return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, 'phoneNumber, password, name, birthday');
   }
-  if (typeof phoneNumber != 'string' || typeof password != 'string') {
-    return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, 'phoneNumber, password');
+  if (typeof phoneNumber != 'string' || typeof password != 'string' || typeof name != 'string') {
+    return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, 'phoneNumber, password, name');
   }
   if (!validInput.checkPhoneNumber(phoneNumber)) {
     return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'phoneNumber');
@@ -77,6 +77,8 @@ router.post('/signup', async (req, res) => {
     const newUser = new User({
       phoneNumber,
       password,
+      name,
+      birthday: new Date(birthday),
       verifyCode: random4digit(),
       isVerified: false
     });
@@ -215,7 +217,9 @@ router.post('/check_verify_code', async (req, res) => {
       let data = {
         token: token,
         id: user._id,
-        active: null
+        username: (loginUser.name) ? loginUser.name : null,
+        active: null,
+        avatar: (loginUser.avatar.url) ? loginUser.avatar.url : null,
       }
       return callRes(res, responseError.OK, data);
     } catch (err) {

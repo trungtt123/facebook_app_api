@@ -101,6 +101,9 @@ const UserSchema = new Schema({
     timeLastRequestGetVerifyCode: {
       type: Date
     },
+    birthday: {
+      type: Date
+    }
 })
 
 module.exports = mongoose.model('users', UserSchema);
