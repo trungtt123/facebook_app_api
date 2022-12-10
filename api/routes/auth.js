@@ -52,6 +52,31 @@ router.get('/verifyToken', verifyToken, async (req, res) => {
     return callRes(res, responseError.UNKNOWN_ERROR, error.message);
   }
 });
+router.post('/checkexistphonenumber', async (req, res) => {
+  const phoneNumber = req.query.phonenumber;
+  if (phoneNumber === undefined) {
+    return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, 'phoneNumber');
+  }
+  if (!validInput.checkPhoneNumber(phoneNumber)) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'phoneNumber');
+  }
+  let user = await User.findOne({ phoneNumber });
+  try {
+    const data = {
+      message: '',
+      isExisted: true
+    }
+    if (user) {
+      data.message = 'phoneNumber is existed';
+      return callRes(res, responseError.OK, data);
+    }
+    data.isExisted = false;
+    return callRes(res, responseError.OK, data);
+  }
+  catch (error) {
+    return callRes(res, responseError.UNKNOWN_ERROR, error.message);
+  }
+});
 router.post('/signup', async (req, res) => {
   const { password, name, birthday } = req.query;
   let phoneNumber = req.query.phonenumber;
