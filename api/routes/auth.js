@@ -174,7 +174,7 @@ router.post('/get_verify_code', async (req, res) => {
       console.log(time);
       if (time < 120) {
         console.log("2 lan lay get verify gan nhau < 120s");
-        return callRes(res, responseError.ACTION_HAS_BEEN_DONE_PREVIOUSLY_BY_THIS_USER, 'Await ' + (120 - time) + 's');
+        return callRes(res, responseError.ACTION_HAS_BEEN_DONE_PREVIOUSLY_BY_THIS_USER, (120 - time));
       }
     }
 
