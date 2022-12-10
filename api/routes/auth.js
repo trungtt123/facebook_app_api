@@ -284,10 +284,10 @@ router.post('/login', async (req, res) => {
     // check for existing user
     let user = await User.findOne({ phoneNumber });
     if (!user) return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'không có user này');
-    if (!user.isVerified) return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'chưa xác thực code verify');
     bcrypt.compare(password, user.password)
       .then(async (isMatch) => {
         if (!isMatch) return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'password');
+        if (!user.isVerified) return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'chưa xác thực code verify');
         user.dateLogin = Date.now();
         try {
           let loginUser = await user.save();
