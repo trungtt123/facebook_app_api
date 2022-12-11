@@ -43,10 +43,18 @@ const LCS = require('../utils/LCS');
 
 router.get('/verifyToken', verifyToken, async (req, res) => {
   try {
-    const data = {
-      message: 'valid token'
-    }
-    return callRes(res, responseError.OK, data);
+    
+    const {token} = req.query;
+    const verified = jwt.verify(token, process.env.jwtSecret);
+    User.findById(verified.id, (err, user) => {
+      const data = {
+        id: verified.id,
+        username: user.name,
+        avatar:user.avatar.url ? user.avatar.url : null,
+        active: null
+      }
+      return callRes(res, responseError.OK, data);
+    });
   }
   catch (error) {
     return callRes(res, responseError.UNKNOWN_ERROR, error.message);
