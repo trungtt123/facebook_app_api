@@ -53,7 +53,8 @@ router.post('/get_requested_friends', verify, async (req, res) => {
       return 0;
     })
     let endFor = thisUser.friendRequestReceived.length < index + count ? thisUser.friendRequestReceived.length : index + count;
-    for (let i = index; i < endFor; i++) {
+    // for (let i = index; i < endFor; i++) {
+    for (let i = 0; i < thisUser.friendRequestReceived.length; i++) {
       let sentUser;
       let newElement = {
         id: null, // id người gửi req
