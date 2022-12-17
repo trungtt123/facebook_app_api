@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const verify = require('../utils/verifyToken');
 const convertString = require('../utils/convertString');
-const {responseError, callRes} = require('../response/error');
+const { responseError, callRes } = require('../response/error');
 const checkInput = require('../utils/validInput');
 const validTime = require('../utils/validTime');
 const MAX_FRIEND_NUMBER = 500;
@@ -32,9 +32,9 @@ router.post('/get_requested_friends', verify, async (req, res) => {
   let thisUser;
 
   // check input data
-  if ( index === undefined|| count === undefined)
+  if (index === undefined || count === undefined)
     return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, ': index, count');
-  if (!checkInput.checkIsInteger (index) || !checkInput.checkIsInteger (count))
+  if (!checkInput.checkIsInteger(index) || !checkInput.checkIsInteger(count))
     return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, ': index, count');
   if (index < 0 || count < 0) return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, ': index, count');
 
@@ -44,10 +44,10 @@ router.post('/get_requested_friends', verify, async (req, res) => {
       .populate('friendRequestReceived');
     // console.log(thisUser);
     thisUser.friendRequestReceived?.sort((a, b) => {
-      if (+a.lastCreated < +b.lastCreated){
+      if (+a.lastCreated < +b.lastCreated) {
         return 1;
       }
-      if (+a.lastCreated > +b.lastCreated){
+      if (+a.lastCreated > +b.lastCreated) {
         return -1;
       }
       return 0;
@@ -117,8 +117,8 @@ router.post('/set_request_friend', verify, async (req, res) => {
       targetUser = await User.findById(user_id);
       if (!targetUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'targetUser');
       thisUser = await User.findById(id);
-      if(!thisUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'thisUser');
-      if(thisUser.friends.length >= MAX_FRIEND_NUMBER)
+      if (!thisUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'thisUser');
+      if (thisUser.friends.length >= MAX_FRIEND_NUMBER)
         return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'out of Max Friends');
 
       let indexExist = thisUser.friends.findIndex(element => element.friend._id.equals(targetUser._id));
@@ -126,7 +126,7 @@ router.post('/set_request_friend', verify, async (req, res) => {
         return callRes(res, responseError.ACTION_HAS_BEEN_DONE_PREVIOUSLY_BY_THIS_USER, 'you two are friend');
       // indexExist < 0, chưa là bạn
       let findIndexBlockTarget = targetUser.blockedList.findIndex(e => e.user._id.equals(thisUser._id));
-      
+
       // đang bị bên kia block
       if (findIndexBlockTarget >= 0) return callRes(res, responseError.NOT_ACCESS, 'bị block rồi em ơi ko gửi kb được');
       else {// ko bị bên kia block, xóa block bên kia đi (nếu có) 
@@ -136,11 +136,11 @@ router.post('/set_request_friend', verify, async (req, res) => {
       // add new element to sent request
       let addElement = { "_id": targetUser._id };
       let isExisted = thisUser.friendRequestSent.findIndex(element => element._id.equals(addElement._id));
-      
+
       if (isExisted < 0) { // chưa gửi yêu cầu trước đó
         thisUser.friendRequestSent.push(addElement);
         thisUser = await thisUser.save();
-        data.requested_friends = thisUser.friendRequestSent.length;
+        data.requested_friends = 1;
         // add new element of request received
         let addElement1 = { fromUser: { "_id": thisUser._id } };
         let isExisted1 = targetUser.friendRequestReceived.findIndex(element =>
@@ -151,9 +151,9 @@ router.post('/set_request_friend', verify, async (req, res) => {
         }
         targetUser = await targetUser.save();
       } else { // đã gửi yêu cầu trước đó, gửi lại để hủy yêu cầu
-        thisUser.friendRequestSent.splice(isExisted,1);
+        thisUser.friendRequestSent.splice(isExisted, 1);
         thisUser = await thisUser.save();
-        data.requested_friends = thisUser.friendRequestSent.length;
+        data.requested_friends = 0;
         // xóa request bên nhận
         let isExisted1 = targetUser.friendRequestReceived.findIndex(element =>
           element.fromUser._id.equals(thisUser._id));
@@ -172,69 +172,69 @@ router.post('/set_request_friend', verify, async (req, res) => {
 
 
 
-router.post("/set_block", verify, async(req, res) => {
-    var thisUser, targetUser;
+router.post("/set_block", verify, async (req, res) => {
+  var thisUser, targetUser;
 
-    let { token, user_id, type } = req.query;
-    let id = req.user.id;
-    thisUser = await User.findById(id);
-    if (thisUser.isBlocked){
-        return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'Your account has been blocked');
-    }
-    if (!token || !user_id || !type){
-        return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, 'token and user_id and type');
-    }
-    if (type != 1 && type != 0){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'type');
-    }
-    if (user_id == id){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'Cannot block yourself');
-    }
-    thisUser = await User.findById(id);
-    try{
-        targetUser = await User.findById(user_id);
-    } catch (err){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'Cannot find user wanting to block');
-    }
-    if (targetUser == null){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'Cannot find user wanting to block');
-    }
-    if (targetUser.isBlocked){
-        return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'User wanted to block has been blocked by server');
-    }
-    if (!targetUser){
-        return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'User wanted to block not existed');
-    }
-    else{
-        let index = thisUser.blockedList.findIndex(element => element.user._id.equals(targetUser._id));
-        let indexFriend = thisUser.friends.findIndex(element => element.friend._id.equals(targetUser._id));
-        let indexTargetFriend = targetUser.friends.findIndex(element => element.friend._id.equals(thisUser._id));
-        if (index < 0) {
-            if (type == 0){
-                if (indexFriend >=0 ){
-                    thisUser.friends.splice(indexFriend, 1);
-                    targetUser.friends.splice(indexTargetFriend, 1);
-                }
-                thisUser.blockedList.push({ user: targetUser._id, createdAt: Date.now() });
-                thisUser.save();
-                targetUser.save();
-                return callRes(res, responseError.OK, 'Successfully block this user');
-            }
-            else{
-                return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, "You haven't blocked this user");
-            }
+  let { token, user_id, type } = req.query;
+  let id = req.user.id;
+  thisUser = await User.findById(id);
+  if (thisUser.isBlocked) {
+    return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'Your account has been blocked');
+  }
+  if (!token || !user_id || !type) {
+    return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, 'token and user_id and type');
+  }
+  if (type != 1 && type != 0) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'type');
+  }
+  if (user_id == id) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'Cannot block yourself');
+  }
+  thisUser = await User.findById(id);
+  try {
+    targetUser = await User.findById(user_id);
+  } catch (err) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'Cannot find user wanting to block');
+  }
+  if (targetUser == null) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'Cannot find user wanting to block');
+  }
+  if (targetUser.isBlocked) {
+    return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'User wanted to block has been blocked by server');
+  }
+  if (!targetUser) {
+    return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'User wanted to block not existed');
+  }
+  else {
+    let index = thisUser.blockedList.findIndex(element => element.user._id.equals(targetUser._id));
+    let indexFriend = thisUser.friends.findIndex(element => element.friend._id.equals(targetUser._id));
+    let indexTargetFriend = targetUser.friends.findIndex(element => element.friend._id.equals(thisUser._id));
+    if (index < 0) {
+      if (type == 0) {
+        if (indexFriend >= 0) {
+          thisUser.friends.splice(indexFriend, 1);
+          targetUser.friends.splice(indexTargetFriend, 1);
         }
-        else{
-            if (type == 1){
-                thisUser.blockedList.splice(index, 1);
-                thisUser.save();
-                return callRes(res, responseError.OK, 'Successfully unblock this user');
-            }
-            else{
-                return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, "You have already blocked this user");
-            }
-        }
+        thisUser.blockedList.push({ user: targetUser._id, createdAt: Date.now() });
+        thisUser.save();
+        targetUser.save();
+        return callRes(res, responseError.OK, 'Successfully block this user');
+      }
+      else {
+        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, "You haven't blocked this user");
+      }
     }
+    else {
+      if (type == 1) {
+        thisUser.blockedList.splice(index, 1);
+        thisUser.save();
+        return callRes(res, responseError.OK, 'Successfully unblock this user');
+      }
+      else {
+        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, "You have already blocked this user");
+      }
+    }
+  }
 });
 
 // @route  POST it4788/friend/set_accept_friend
@@ -253,24 +253,24 @@ router.post('/set_accept_friend', verify, async (req, res) => {
   // user_id là id của người nhận request friend
   // is_accept : 0 là từ chối, 1 là đồng ý
   let { user_id, is_accept } = req.query;
-  if ( user_id === undefined|| is_accept === undefined)
+  if (user_id === undefined || is_accept === undefined)
     return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, 'user_id, is_accept');
   if (typeof user_id != 'string')
     return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, 'user_id');
-  if (!checkInput.checkIsInteger (is_accept))
+  if (!checkInput.checkIsInteger(is_accept))
     return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, 'is_accept');
   is_accept = parseInt(is_accept, 10);
   if (is_accept != 0 && is_accept != 1)
     return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'is_accept');
   let id = req.user.id;
   if (id == user_id) {
-    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID,'user_id');
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'user_id');
   } else {
     try {
       thisUser = await User.findById(id);
-      if(!thisUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'thisUser');
+      if (!thisUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'thisUser');
       sentUser = await User.findById(user_id);
-      if(!sentUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'sentUser');
+      if (!sentUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'sentUser');
       if (is_accept == 0) {
         // xóa req bên nhận
         let indexExist = thisUser.friendRequestReceived.findIndex(element =>
@@ -320,63 +320,63 @@ router.post('/set_accept_friend', verify, async (req, res) => {
 })
 
 
-router.post("/get_list_blocks", verify, async(req, res) => {
-    let { token, index, count } = req.query;
-    if (token === undefined || index === undefined || count === undefined){
-        return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, 'token and index and count');
+router.post("/get_list_blocks", verify, async (req, res) => {
+  let { token, index, count } = req.query;
+  if (token === undefined || index === undefined || count === undefined) {
+    return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, 'token and index and count');
+  }
+  if (typeof index != "string") {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'index');
+  }
+  if (typeof count != "string") {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'count');
+  }
+  let isNumIndex = /^\d+$/.test(index);
+  if (!isNumIndex) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'index');
+  }
+  let isNumCount = /^\d+$/.test(count);
+  if (!isNumCount) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'count');
+  }
+  index = parseInt(req.query.index);
+  count = parseInt(req.query.count);
+  if (index < 0) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'index');
+  }
+  if (count < 0) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'count');
+  }
+  if (count == 0) {
+    return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA);
+  }
+  let id = req.user.id;
+  let thisUser = await User.findById(id);
+  if (thisUser.isBlocked) {
+    return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'Your account has been blocked');
+  }
+  let code, message;
+  let data = [];
+  let targetUser;
+  targetUser = await User.findById(id);
+  let endFor = targetUser.blockedList.length < index + count ? targetUser.blockedList.length : index + count;
+  for (let i = index; i < endFor; i++) {
+    let x = targetUser.blockedList[i];
+    let blockedUser = await User.findById(x.user);
+    let userInfo = {
+      id: null, // id of this guy
+      username: null,
+      avatar: null,
     }
-    if (typeof index != "string"){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'index');
-    }
-    if (typeof count != "string"){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'count');
-    }
-    let isNumIndex = /^\d+$/.test(index);
-    if (!isNumIndex){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'index');
-    }
-    let isNumCount = /^\d+$/.test(count);
-    if (!isNumCount){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'count');
-    }
-    index = parseInt(req.query.index);
-    count = parseInt(req.query.count);
-    if (index < 0){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'index');
-    }
-    if (count < 0){
-        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'count');
-    }
-    if (count == 0){
-        return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA);
-    }
-    let id = req.user.id;
-    let thisUser = await User.findById(id);
-    if (thisUser.isBlocked){
-        return callRes(res, responseError.USER_IS_NOT_VALIDATED, 'Your account has been blocked');
-    }
-    let code, message;
-    let data = [];
-    let targetUser;
-    targetUser = await User.findById(id);
-    let endFor = targetUser.blockedList.length < index + count ? targetUser.blockedList.length : index + count;
-    for (let i = index; i < endFor; i++) {
-        let x = targetUser.blockedList[i];
-        let blockedUser = await User.findById(x.user);
-        let userInfo = {
-            id: null, // id of this guy
-            username: null,
-            avatar: null,
-        }
-        userInfo.id = blockedUser._id.toString();
-        userInfo.username = blockedUser.name;
-        userInfo.avatar = blockedUser.avatar.url;
-        data.push(userInfo);
-    }
-    if (data.length == 0){
-        return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA);
-    }
-    return callRes(res, responseError.OK, data);
+    userInfo.id = blockedUser._id.toString();
+    userInfo.username = blockedUser.name;
+    userInfo.avatar = blockedUser.avatar.url;
+    data.push(userInfo);
+  }
+  if (data.length == 0) {
+    return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA);
+  }
+  return callRes(res, responseError.OK, data);
 });
 
 // @route  POST it4788/friend/get_user_friends
@@ -403,9 +403,9 @@ router.post('/get_user_friends', verify, async (req, res) => {
   if (user_id && typeof user_id != 'string')
     return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, 'user_id');
   // check input data
-  if ( index === undefined|| count === undefined)
+  if (index === undefined || count === undefined)
     return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, ': index, count');
-  if (!checkInput.checkIsInteger (index) || !checkInput.checkIsInteger (count))
+  if (!checkInput.checkIsInteger(index) || !checkInput.checkIsInteger(count))
     return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, ': index, count');
   if (index < 0 || count < 0) return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, ': index, count');
 
@@ -423,7 +423,7 @@ router.post('/get_user_friends', verify, async (req, res) => {
     } else {
       targetUser = thisUser;
     }
-    await targetUser.populate({ path: 'friends.friend', select: {'friends': 1, 'name': 1,  'avatar': 1} }).execPopulate();
+    await targetUser.populate({ path: 'friends.friend', select: { 'friends': 1, 'name': 1, 'avatar': 1 } }).execPopulate();
     // console.log(targetUser);
 
     let endFor = targetUser.friends.length < index + count ? targetUser.friends.length : index + count;
@@ -440,8 +440,7 @@ router.post('/get_user_friends', verify, async (req, res) => {
       friendInfor.id = x.friend._id.toString();
       friendInfor.username = x.friend.name;
       friendInfor.avatar = x.friend.avatar.url;
-      friendInfor.created = validTime.timeToSecond(x.createdAt) ;
-      console.log(friendInfor);
+      friendInfor.created = validTime.timeToSecond(x.createdAt);
       if (!thisUser._id.equals(x.friend._id))
         if (thisUser.friends.length > 0 && x.friend.friends.length > 0) {
           friendInfor.same_friends = countSameFriend(thisUser.friends, x.friend.friends);
@@ -456,68 +455,111 @@ router.post('/get_user_friends', verify, async (req, res) => {
   }
 })
 
+router.post('/unfriend', verify, async (req, res) => {
+  // input
+  let { user_id } = req.query;
+  // user id from token
+  let id = req.user.id;
+
+  let data = {
+    id: null, // id of this guy
+    username: null,
+    avatar: null,
+    same_friends: 0, //number of same friends
+  }
+  if (user_id && typeof user_id != 'string' && user_id === id)
+    return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, 'user_id');
+  let thisUser, targetUser;
+
+  try {
+    thisUser = await User.findById(id);
+    if (!thisUser) return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'thisUser')
+    // console.log(thisUser);
+    if (user_id && user_id != id) {
+      targetUser = await User.findById(user_id);
+      if (!targetUser) return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'targetUser');
+      if (!thisUser.friends.find(o => o.friend.toString() === user_id))
+      return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'targetUser');
+      if (!targetUser.friends.find(o => o.friend.toString() === id))
+      return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'targetUser');
+      thisUser.friends = thisUser.friends.filter(o => o.friend.toString() !== user_id);
+      targetUser.friends = targetUser.friends.filter(o => o.friend.toString() !== id);
+    }
+    // console.log(targetUser);
+    data.same_friends = countSameFriend(thisUser.friends, targetUser.friends);
+    data.avatar = targetUser.avatar.url;
+    data.username = targetUser.name;
+    data.id = user_id
+    await thisUser.save();
+    await targetUser.save();
+    return callRes(res, responseError.OK, data);
+  } catch (error) {
+    return callRes(res, responseError.UNKNOWN_ERROR, error.message);
+  }
+})
+
 router.post('/get_list_suggested_friends', verify, async (req, res) => {
   try {
-  const { index, count } = req.query;
-  // check input data
-  if ( index === undefined|| count === undefined)
-    return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, ': index, count');
-  if (!checkInput.checkIsInteger (index) || !checkInput.checkIsInteger (count))
-    return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, ': index, count');
-  if (index < 0 || count < 0) return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, ': index, count');
+    const { index, count } = req.query;
+    // check input data
+    if (index === undefined || count === undefined)
+      return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, ': index, count');
+    if (!checkInput.checkIsInteger(index) || !checkInput.checkIsInteger(count))
+      return callRes(res, responseError.PARAMETER_TYPE_IS_INVALID, ': index, count');
+    if (index < 0 || count < 0) return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, ': index, count');
 
-  let id = req.user.id;
-  let data = {
-    total: 0,
-    list_users: []
-  };
-  let listID = [], list_users = [];
-  let thisUser, targetUser;
-  thisUser = await User.findById(id);
-  if (!thisUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'thisUser');
-  if (thisUser.friends.length > 0) {
-    for (let x of thisUser.friends){
-      targetUser = await User.findById(x.friend).select({ "friends": 1 });
-      if (!targetUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'targetUser');
-      await targetUser.populate({ path: 'friends.friend', select: 'friends _id name avatar' }).execPopulate();
-      for (let y of targetUser.friends) {
-        if (!y.friend._id.equals(id) && !listID.includes(y.friend._id)) {
-          let e = {
-            user_id: y.friend._id,
-            username: (y.friend.name) ? y.friend.name : null,
-            avatar: (y.friend.avatar) ? y.friend.avatar.url : null,
-            same_friends: 0
+    let id = req.user.id;
+    let data = {
+      total: 0,
+      list_users: []
+    };
+    let listID = [], list_users = [];
+    let thisUser, targetUser;
+    thisUser = await User.findById(id);
+    if (!thisUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'thisUser');
+    if (thisUser.friends.length > 0) {
+      for (let x of thisUser.friends) {
+        targetUser = await User.findById(x.friend).select({ "friends": 1 });
+        if (!targetUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'targetUser');
+        await targetUser.populate({ path: 'friends.friend', select: 'friends _id name avatar' }).execPopulate();
+        for (let y of targetUser.friends) {
+          if (!y.friend._id.equals(id) && !listID.includes(y.friend._id)) {
+            let e = {
+              user_id: y.friend._id,
+              username: (y.friend.name) ? y.friend.name : null,
+              avatar: (y.friend.avatar) ? y.friend.avatar.url : null,
+              same_friends: 0
+            }
+            if (thisUser.friends.length > 0 && y.friend.friends.length > 0) {
+              e.same_friends = countSameFriend(thisUser.friends, y.friend.friends);
+            }
+            list_users.push(e);
+            listID.push(y.friend.id);
           }
-          if (thisUser.friends.length > 0 && y.friend.friends.length > 0){
-            e.same_friends = countSameFriend(thisUser.friends,y.friend.friends);
-          }
-          list_users.push(e);
-          listID.push(y.friend.id);
         }
       }
     }
-  }
-  if (list_users.length == 0){
-    let users = await User.find({'user._id': {$ne: id}})
-      .select({ "friends": 1, "_id": 1, "name": 1, "avatar": 1 })
-      .sort("-createdAt");
-    if (!users) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'no other user');
-    for (let y of users) {
+    if (list_users.length == 0) {
+      let users = await User.find({ 'user._id': { $ne: id } })
+        .select({ "friends": 1, "_id": 1, "name": 1, "avatar": 1 })
+        .sort("-createdAt");
+      if (!users) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'no other user');
+      for (let y of users) {
         let e = {
           user_id: y._id,
           username: y.name,
           avatar: (y.avatar) ? y.avatar.url : null,
           same_friends: 0
         }
-        if (thisUser.friends.length > 0 && y.friends.length > 0){
-          e.same_friends = countSameFriend(thisUser.friends,y.friends);
+        if (thisUser.friends.length > 0 && y.friends.length > 0) {
+          e.same_friends = countSameFriend(thisUser.friends, y.friends);
         }
         list_users.push(e);
+      }
     }
-  }
-  data.list_users = list_users.slice(index, index + count);
-  data.total = list_users.length;
-  return callRes(res, responseError.OK, data);
+    data.list_users = list_users.slice(index, index + count);
+    data.total = list_users.length;
+    return callRes(res, responseError.OK, data);
   } catch (error) {
     return callRes(res, responseError.UNKNOWN_ERROR, error.message);
   }
