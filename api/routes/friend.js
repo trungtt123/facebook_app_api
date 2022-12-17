@@ -43,7 +43,15 @@ router.post('/get_requested_friends', verify, async (req, res) => {
       .select({ "friends": 1, "friendRequestReceived": 1, "_id": 1 })
       .populate('friendRequestReceived');
     // console.log(thisUser);
-
+    thisUser.friendRequestReceived?.sort((a, b) => {
+      if (+a.lastCreated < +b.lastCreated){
+        return 1;
+      }
+      if (+a.lastCreated > +b.lastCreated){
+        return -1;
+      }
+      return 0;
+    })
     let endFor = thisUser.friendRequestReceived.length < index + count ? thisUser.friendRequestReceived.length : index + count;
     for (let i = index; i < endFor; i++) {
       let sentUser;
