@@ -423,11 +423,12 @@ router.post('/get_user_friends', verify, async (req, res) => {
     } else {
       targetUser = thisUser;
     }
-    await targetUser.populate({ path: 'friends.friend', select: 'friends' }).execPopulate();
+    await targetUser.populate({ path: 'friends.friend', select: {'friends': 1, 'name': 1,  'avatar': 1} }).execPopulate();
     // console.log(targetUser);
 
     let endFor = targetUser.friends.length < index + count ? targetUser.friends.length : index + count;
-    for (let i = index; i < endFor; i++) {
+    // for (let i = index; i < endFor; i++) {
+    for (let i = 0; i < targetUser.friends.length; i++) {
       let x = targetUser.friends[i];
       let friendInfor = {
         id: null, // id of this guy
@@ -437,10 +438,10 @@ router.post('/get_user_friends', verify, async (req, res) => {
         created: null //time start friend between this guy and targetUser
       }
       friendInfor.id = x.friend._id.toString();
-      friendInfor.username = x.friend.username;
+      friendInfor.username = x.friend.name;
       friendInfor.avatar = x.friend.avatar.url;
       friendInfor.created = validTime.timeToSecond(x.createdAt) ;
-
+      console.log(friendInfor);
       if (!thisUser._id.equals(x.friend._id))
         if (thisUser.friends.length > 0 && x.friend.friends.length > 0) {
           friendInfor.same_friends = countSameFriend(thisUser.friends, x.friend.friends);
