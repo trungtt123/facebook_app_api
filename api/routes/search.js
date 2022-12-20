@@ -41,9 +41,8 @@ router.post('/search', verify, (req, res) => {
     console.log("searching posts with keyword: " + keyword)
     var found_posts = []
 
-    Post.find(
-        { "described": {$ne: null} }, 
-        (err, posts) => {
+    Post.find({ "described": {$ne: null} }).populate('author')
+    .exec((err, posts) => {
 
             // problem with DB
             if (err) return setAndSendResponse(res, responseError.CAN_NOT_CONNECT_TO_DB);
