@@ -413,7 +413,7 @@ router.post('/get_user_friends', verify, async (req, res) => {
   let thisUser, targetUser;
 
   try {
-    thisUser = await User.findById(id).select({ "friends": 1 });
+    thisUser = await User.findById(id).select({ "friends": 1, 'friendRequestSent': 1, 'friendRequestReceived': 1 });
     if (!thisUser) return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'thisUser')
     // console.log(thisUser);
     if (user_id && user_id != id) {
@@ -424,7 +424,7 @@ router.post('/get_user_friends', verify, async (req, res) => {
       targetUser = thisUser;
     }
     await targetUser.populate({ path: 'friends.friend', select: { 'friends': 1, 'name': 1, 'avatar': 1 } }).execPopulate();
-    // console.log(targetUser);
+    console.log(user_id, id);
 
     let endFor = targetUser.friends.length < index + count ? targetUser.friends.length : index + count;
     // for (let i = index; i < endFor; i++) {
@@ -435,12 +435,23 @@ router.post('/get_user_friends', verify, async (req, res) => {
         username: null,
         avatar: null,
         same_friends: 0, //number of same friends
-        created: null //time start friend between this guy and targetUser
+        created: null, //time start friend between this guy and targetUser
+        isFriendStatus: 0 // = 0 nếu 2 bên chưa gửi lời mời nào cho nhau, 1 nếu bạn đã gửi lời mời, 
+        //2 nếu họ đã gửi lời mời cho bạn, 3 nếu đã là bạn bè, -1 nếu friend chính là thisUser
       }
       friendInfor.id = x.friend._id.toString();
       friendInfor.username = x.friend.name;
       friendInfor.avatar = x.friend.avatar.url;
       friendInfor.created = validTime.timeToSecond(x.createdAt);
+      if (id === x.friend._id.toString()){
+        friendInfor.isFriendStatus = -1;
+      }
+      else if (thisUser.friendRequestSent?.find(o => o.toString() === x.friend._id.toString())) friendInfor.isFriendStatus = 1;
+      else if (thisUser.friendRequestReceived?.find(o => o.fromUser.toString() === x.friend._id.toString())) friendInfor.isFriendStatus = 2;
+      else if (user_id === id) {
+        friendInfor.isFriendStatus = 3;
+      }
+      else if (thisUser.friends?.find(o => o.friend.toString() === x.friend._id.toString())) friendInfor.isFriendStatus = 3;
       if (!thisUser._id.equals(x.friend._id))
         if (thisUser.friends.length > 0 && x.friend.friends.length > 0) {
           friendInfor.same_friends = countSameFriend(thisUser.friends, x.friend.friends);
@@ -451,6 +462,7 @@ router.post('/get_user_friends', verify, async (req, res) => {
     data.total = targetUser.friends.length;
     return callRes(res, responseError.OK, data);
   } catch (error) {
+    console.log(error.message)
     return callRes(res, responseError.UNKNOWN_ERROR, error.message);
   }
 })
@@ -479,9 +491,9 @@ router.post('/unfriend', verify, async (req, res) => {
       targetUser = await User.findById(user_id);
       if (!targetUser) return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'targetUser');
       if (!thisUser.friends.find(o => o.friend.toString() === user_id))
-      return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'targetUser');
+        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'targetUser');
       if (!targetUser.friends.find(o => o.friend.toString() === id))
-      return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'targetUser');
+        return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'targetUser');
       thisUser.friends = thisUser.friends.filter(o => o.friend.toString() !== user_id);
       targetUser.friends = targetUser.friends.filter(o => o.friend.toString() !== id);
     }
@@ -489,7 +501,8 @@ router.post('/unfriend', verify, async (req, res) => {
     data.same_friends = countSameFriend(thisUser.friends, targetUser.friends);
     data.avatar = targetUser.avatar.url;
     data.username = targetUser.name;
-    data.id = user_id
+    data.id = user_id;
+    data.isFriendStatus = 0;
     await thisUser.save();
     await targetUser.save();
     return callRes(res, responseError.OK, data);
@@ -566,8 +579,9 @@ router.post('/get_list_suggested_friends', verify, async (req, res) => {
 })
 
 // count same friend between 2 array x, y
+// x thisuser, y target user 
 function countSameFriend(x, y) {
-  let xx = x.map(e => e.friend.toString());
+  let xx = x.map(e => e.friend._id.toString());
   let yy = y.map(e => e.friend.toString());
   let z = xx.filter(function (val) {
     return yy.indexOf(val) != -1;
