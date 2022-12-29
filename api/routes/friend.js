@@ -554,26 +554,34 @@ router.post('/get_list_suggested_friends', verify, async (req, res) => {
     }
     if (list_users.length == 0) {
       let users = await User.find({ 'user._id': { $ne: id } })
-        .select({ "friends": 1, "_id": 1, "name": 1, "avatar": 1 })
+        .select({ "friends": 1, "_id": 1, "name": 1, "avatar": 1, "friendRequestSent" : 1, "friendRequestReceived" : 1 })
         .sort("-createdAt");
       if (!users) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'no other user');
       for (let y of users) {
         let e = {
-          user_id: y._id,
+          id: y._id,
           username: y.name,
           avatar: (y.avatar) ? y.avatar.url : null,
-          same_friends: 0
+          same_friends: 0,
+          isFriendStatus: 0 // = 0 nếu 2 bên chưa gửi lời mời nào cho nhau, 1 nếu bạn đã gửi lời mời, 
+        //2 nếu họ đã gửi lời mời cho bạn, -1 nếu friend chính là thisUser
         }
         if (thisUser.friends.length > 0 && y.friends.length > 0) {
           e.same_friends = countSameFriend(thisUser.friends, y.friends);
         }
+        if (id === y._id.toString()){
+          e.isFriendStatus = -1;
+        }
+        else if (thisUser.friendRequestSent?.find(o => o.toString() === y._id.toString())) e.isFriendStatus = 1;
+        else if (thisUser.friendRequestReceived?.find(o => o.fromUser.toString() === y._id.toString())) e.isFriendStatus = 2;
         list_users.push(e);
       }
     }
-    data.list_users = list_users.slice(index, index + count);
+    data.list_users = list_users;//.slice(index, index + count);
     data.total = list_users.length;
     return callRes(res, responseError.OK, data);
   } catch (error) {
+    console.log(error)
     return callRes(res, responseError.UNKNOWN_ERROR, error.message);
   }
 })
