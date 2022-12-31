@@ -530,13 +530,15 @@ router.post('/get_list_suggested_friends', verify, async (req, res) => {
     let thisUser, targetUser;
     thisUser = await User.findById(id);
     if (!thisUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'thisUser');
+    const listFriendId = thisUser.friends.map(o => o.friend);
     if (thisUser.friends.length > 0) {
+      console.log('listFriendId', listFriendId)
       for (let x of thisUser.friends) {
         targetUser = await User.findById(x.friend).select({ "friends": 1 });
         if (!targetUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'targetUser');
         await targetUser.populate({ path: 'friends.friend', select: 'friends _id name avatar' }).execPopulate();
         for (let y of targetUser.friends) {
-          if (!y.friend._id.equals(id) && !listID.includes(y.friend._id)) {
+          if (!y.friend._id.equals(id) && !listID.includes(y.friend._id) && !listFriendId.includes(y._id)) {
             let e = {
               user_id: y.friend._id,
               username: (y.friend.name) ? y.friend.name : null,
@@ -558,6 +560,7 @@ router.post('/get_list_suggested_friends', verify, async (req, res) => {
         .sort("-createdAt");
       if (!users) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'no other user');
       for (let y of users) {
+        if (listFriendId.includes(y._id)) continue;
         let e = {
           id: y._id,
           username: y.name,
