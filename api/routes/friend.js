@@ -532,7 +532,6 @@ router.post('/get_list_suggested_friends', verify, async (req, res) => {
     if (!thisUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'thisUser');
     const listFriendId = thisUser.friends.map(o => o.friend);
     if (thisUser.friends.length > 0) {
-      console.log('listFriendId', listFriendId)
       for (let x of thisUser.friends) {
         targetUser = await User.findById(x.friend).select({ "friends": 1 });
         if (!targetUser) return callRes(res, responseError.NO_DATA_OR_END_OF_LIST_DATA, 'targetUser');
