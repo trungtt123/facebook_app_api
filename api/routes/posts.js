@@ -418,6 +418,7 @@ router.post('/add_post', cpUpload, verify, async (req, res, next) => {
         image = req.files.image;
         video = req.files.video;
     }
+    console.log(req.files);
     var user = req.user;
 
     if (!described && !image && !video) {
