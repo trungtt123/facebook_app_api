@@ -172,7 +172,7 @@ router.post('/get_comment', async (req, res) => {
 
         let sliceComments = comments.slice(index, index + count);
 
-        if(sliceComments.length < 1) {
+        if(sliceComments.length < 0) {
             console.log('sliceComments no have comments');
             return setAndSendResponse(res, responseError.NO_DATA_OR_END_OF_LIST_DATA);
         }
