@@ -163,7 +163,7 @@ router.post('/get_comment', async (req, res) => {
     }
 
     try {
-        const comments = await Comment.find({post: id}).populate('poster').sort("created");
+        const comments = await Comment.find({post: id}).populate('poster').sort({"created" : -1});
 
         if(!comments) {
             console.log('Post no have comments');
