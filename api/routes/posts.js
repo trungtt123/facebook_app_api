@@ -133,7 +133,9 @@ router.post('/get_list_videos', async (req, res) => {
                 id: post._id,
                 video: post.video.url ? {
                     url: post.video.url,
-                    thumb: null
+                    thumb: null,
+                    width: post.video.width,
+                    height: post.video.height
                 } : null,
                 described: post.described ? post.described : null,
                 created: post.created.toString(),
@@ -243,7 +245,9 @@ router.post('/get_list_posts', async (req, res) => {
                 image: post.image.length > 0 ? post.image.map(image => { return { id: image._id, url: image.url }; }) : null,
                 video: post.video.url ? {
                     url: post.video.url,
-                    thumb: null
+                    thumb: null,
+                    width: post.video.width,
+                    height: post.video.height
                 } : null,
                 described: post.described ? post.described : null,
                 created: post.created.toString(),
@@ -324,7 +328,9 @@ router.post('/get_post', async (req, res) => {
                     image: post.image.length > 0 ? post.image.map(image => { return { id: image._id, url: image.url }; }) : null,
                     video: post.video.url ? {
                         url: post.video.url,
-                        thumb: null
+                        thumb: null,
+                        width: post.video.width,
+                        height: post.video.height
                     } : null,
                     author: post.author ? {
                         id: post.author._id,
@@ -412,7 +418,7 @@ CAN_NOT_CONNECT_TO_DB neu khong luu duoc post vao csdl
 */
 var cpUpload = uploader.fields([{ name: 'image' }, { name: 'video' }]);
 router.post('/add_post', cpUpload, verify, async (req, res, next) => {
-    var { described, status, token } = req.query;
+    var { described, status, token, videoWidth, videoHeight } = req.query;
     var image, video;
     if (req.files) {
         image = req.files.image;
@@ -519,7 +525,7 @@ router.post('/add_post', cpUpload, verify, async (req, res, next) => {
         });
         try {
             const file = await Promise.all(promises);
-            post.video = file[0];
+            post.video = {...file[0], width: videoWidth, height: videoHeight}
         } catch (err) {
             console.log("UPLOAD_FILE_FAILED");
             return setAndSendResponse(res, responseError.UPLOAD_FILE_FAILED);
@@ -545,7 +551,9 @@ router.post('/add_post', cpUpload, verify, async (req, res, next) => {
                 image: savedPost.image.length > 0 ? savedPost.image.map(image => { return { id: image._id, url: image.url }; }) : null,
                 video: savedPost.video.url ? {
                     url: savedPost.video.url,
-                    thumb: null
+                    thumb: null,
+                    width: savedPost.video.width,
+                    height: savedPost.video.height
                 } : null,
                 author: savedPost.author ? {
                     id: savedPost.author._id,
