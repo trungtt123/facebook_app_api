@@ -55,6 +55,12 @@ const postSchema = new Schema({
         },
         url: {
             type: String
+        },
+        width: {
+            type: Number
+        },
+        height: {
+            type: Number
         }
     },
     reports_post: [{

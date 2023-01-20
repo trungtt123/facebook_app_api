@@ -163,7 +163,7 @@ router.post('/get_comment', async (req, res) => {
     }
 
     try {
-        const comments = await Comment.find({post: id}).populate('poster').sort("created");
+        const comments = await Comment.find({post: id}).populate('poster').sort({"created" : -1});
 
         if(!comments) {
             console.log('Post no have comments');
@@ -172,7 +172,7 @@ router.post('/get_comment', async (req, res) => {
 
         let sliceComments = comments.slice(index, index + count);
 
-        if(sliceComments.length < 1) {
+        if(sliceComments.length < 0) {
             console.log('sliceComments no have comments');
             return setAndSendResponse(res, responseError.NO_DATA_OR_END_OF_LIST_DATA);
         }

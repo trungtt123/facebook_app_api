@@ -133,7 +133,9 @@ router.post('/get_list_videos', async (req, res) => {
                 id: post._id,
                 video: post.video.url ? {
                     url: post.video.url,
-                    thumb: null
+                    thumb: null,
+                    width: post.video.width,
+                    height: post.video.height
                 } : null,
                 described: post.described ? post.described : null,
                 created: post.created.toString(),
@@ -243,7 +245,9 @@ router.post('/get_list_posts', async (req, res) => {
                 image: post.image.length > 0 ? post.image.map(image => { return { id: image._id, url: image.url }; }) : null,
                 video: post.video.url ? {
                     url: post.video.url,
-                    thumb: null
+                    thumb: null,
+                    width: post.video.width,
+                    height: post.video.height
                 } : null,
                 described: post.described ? post.described : null,
                 created: post.created.toString(),
@@ -324,7 +328,9 @@ router.post('/get_post', async (req, res) => {
                     image: post.image.length > 0 ? post.image.map(image => { return { id: image._id, url: image.url }; }) : null,
                     video: post.video.url ? {
                         url: post.video.url,
-                        thumb: null
+                        thumb: null,
+                        width: post.video.width,
+                        height: post.video.height
                     } : null,
                     author: post.author ? {
                         id: post.author._id,
@@ -474,13 +480,13 @@ CAN_NOT_CONNECT_TO_DB neu khong luu duoc post vao csdl
 */
 var cpUpload = uploader.fields([{ name: 'image' }, { name: 'video' }]);
 router.post('/add_post', cpUpload, verify, async (req, res, next) => {
-    var { described, status } = req.query;
+    var { described, status, token, videoWidth, videoHeight } = req.query;
     var image, video;
     if (req.files) {
         image = req.files.image;
         video = req.files.video;
     }
-    var user = req.user;
+    var user = await getUserIDFromToken(token);
 
     if (!described && !image && !video) {
         console.log("Khong co described, image, video");
@@ -510,7 +516,7 @@ router.post('/add_post', cpUpload, verify, async (req, res, next) => {
 
     var now = Math.floor(Date.now() / 1000);
     var post = new Post({
-        author: user.id,
+        author: user._id,
         described: described,
         status: status,
         created: now,
@@ -581,7 +587,7 @@ router.post('/add_post', cpUpload, verify, async (req, res, next) => {
         });
         try {
             const file = await Promise.all(promises);
-            post.video = file[0];
+            post.video = {...file[0], width: videoWidth, height: videoHeight}
         } catch (err) {
             console.log("UPLOAD_FILE_FAILED");
             return setAndSendResponse(res, responseError.UPLOAD_FILE_FAILED);
@@ -591,16 +597,39 @@ router.post('/add_post', cpUpload, verify, async (req, res, next) => {
     }
 
     try {
-        const savedPost = await post.save();
-        return res.status(201).send({
+        const postTmp = await post.save();
+        const savedPost = await Post.findById(postTmp._id).populate('author');
+        return res.status(200).send({
             code: "1000",
             message: "OK",
             data: {
                 id: savedPost._id,
-                url: null
+                described: savedPost.described ? savedPost.described : null,
+                created: savedPost.created.toString(),
+                modified: savedPost.modified.toString(),
+                like: savedPost.likedUser.length.toString(),
+                comment: savedPost.comments.length.toString(),
+                is_liked: user ? (savedPost.likedUser.includes(user._id) ? "1" : "0") : "0",
+                image: savedPost.image.length > 0 ? savedPost.image.map(image => { return { id: image._id, url: image.url }; }) : null,
+                video: savedPost.video.url ? {
+                    url: savedPost.video.url,
+                    thumb: null,
+                    width: savedPost.video.width,
+                    height: savedPost.video.height
+                } : null,
+                author: savedPost.author ? {
+                    id: savedPost.author._id,
+                    username: savedPost.author.name ? savedPost.author.name : null,
+                    avatar: savedPost.author.avatar.url ? savedPost.author.avatar.url : null
+                } : null,
+                state: savedPost.status ? savedPost.status : null,
+                is_blocked: is_blocked(user, savedPost.author),
+                can_edit: can_edit(user, savedPost.author),
+                can_comment: "1"
             }
         });
     } catch (err) {
+        console.log(err);
         console.log("CAN_NOT_CONNECT_TO_DB");
         return setAndSendResponse(res, responseError.CAN_NOT_CONNECT_TO_DB);
     }

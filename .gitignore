@@ -1,4 +1,4 @@
 node_modules
 api/config/myprivatekey.json
-# .env
+.env
 tmp/
