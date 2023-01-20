@@ -8,7 +8,7 @@ const { getUserIDFromToken } = require('../utils/getUserIDFromToken');
 var multer = require('multer');
 const { Storage } = require('@google-cloud/storage');
 const { bucket } = require('./firebase');
-var { responseError, setAndSendResponse } = require('../response/error');
+var { responseError, setAndSendResponse, callRes } = require('../response/error');
 const validInput = require('../utils/validInput');
 const MAX_IMAGE_NUMBER = 4;
 const MAX_SIZE_IMAGE = 4 * 1024 * 1024; // for 4MB
@@ -341,6 +341,68 @@ router.post('/get_post', async (req, res) => {
             return setAndSendResponse(res, responseError.POST_IS_NOT_EXISTED);
         }
     } catch (err) {
+        if (err.kind == "ObjectId") {
+            console.log("Sai id");
+            return setAndSendResponse(res, responseError.POST_IS_NOT_EXISTED);
+        }
+        return setAndSendResponse(res, responseError.CAN_NOT_CONNECT_TO_DB);
+    }
+});
+
+router.post('/get_post_by_userId', async (req, res) => {
+    var { userId, token } = req.query;
+    if (userId !== 0 && !userId) {
+        console.log("No have parameter id");
+        return setAndSendResponse(res, responseError.PARAMETER_IS_NOT_ENOUGH);
+    }
+
+    // PARAMETER_TYPE_IS_INVALID
+    if ((userId && typeof userId !== "string") || (token && typeof token !== "string")) {
+        console.log("PARAMETER_TYPE_IS_INVALID");
+        return setAndSendResponse(res, responseError.PARAMETER_TYPE_IS_INVALID);
+    }
+    var user;
+    try {
+        if (token) {
+            user = await getUserIDFromToken(token);
+            if (user && typeof user == "string") {
+                return setAndSendResponse(res, responseError[user]);
+            }
+        }
+        const posts = await Post.find({ 'author': userId }).populate('author').sort("-created");
+        const data = posts.map(post => {
+            return {
+                id: post._id,
+                image: post.image.length > 0 ? post.image.map(image => { return { id: image._id, url: image.url }; }) : null,
+                video: post.video.url ? {
+                    url: post.video.url,
+                    thumb: null
+                } : null,
+                described: post.described ? post.described : null,
+                created: post.created.toString(),
+                modified: post.modified.toString(),
+                like: post.likedUser.length.toString(),
+                comment: post.comments.length.toString(),
+                is_liked: user ? (post.likedUser.includes(user._id) ? "1" : "0") : "0",
+                is_blocked: is_blocked(user, post.author),
+                can_comment: "1",
+                can_edit: can_edit(user, post.author),
+                state: post.status ? post.status : null,
+                author: post.author ? {
+                    id: post.author._id,
+                    username: post.author.name ? post.author.name : null,
+                    avatar: post.author.avatar.url ? post.author.avatar.url : null
+                } : null,
+            }
+        })
+        return res.status(200).send({
+            "code": "200",
+            "message": "OK",
+            "data": data
+        })
+    }
+    catch (err) {
+        console.log('Err:', err);
         if (err.kind == "ObjectId") {
             console.log("Sai id");
             return setAndSendResponse(res, responseError.POST_IS_NOT_EXISTED);
