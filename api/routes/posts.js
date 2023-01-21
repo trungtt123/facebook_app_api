@@ -119,7 +119,7 @@ router.post('/get_list_videos', async (req, res) => {
         index_last_id = 0;
     }
 
-    let slicePosts = posts.slice(index_last_id + index, index_last_id + index + count);
+    let slicePosts = posts;//.slice(index_last_id + index, index_last_id + index + count);
 
     // NO_DATA_OR_END_OF_LIST_DATA
     if (slicePosts.length < 1) {
