@@ -6,7 +6,10 @@ const multer = require('multer');
 const {responseError, callRes} = require('./response/error');
 
 const app = express()
-
+const http = require('http');
+const server = http.createServer(app);
+const io = require('socket.io')(server, { cors: { origin: '*' } });
+global._io = io;
 // use express.json as middleware
 app.use('/public', express.static(__dirname + '/webview'))
 app.use(express.json())
@@ -35,6 +38,13 @@ app.use('/it4788/friend', require('./routes/friend'));
 app.use('/it4788/setting', require('./routes/settings'));
 app.use('/it4788/user', require('./routes/user'));
 app.use('/it4788/chat', require('./routes/chat'));
+_io.on('connection', async (socket) => {
+	console.log('Connected: ' + socket.id);
+    socket.on("disconnect", () => {
+        socket.disconnect();
+        console.log("🔥: A user disconnected");
+    });
+});
 app.use(function (err, req, res, next) {
     if(err instanceof multer.MulterError) {
         if(err.code === 'LIMIT_UNEXPECTED_FILE') {
@@ -45,5 +55,5 @@ app.use(function (err, req, res, next) {
     return callRes(res, responseError.UNKNOWN_ERROR, "Lỗi chưa xác định");
 })
 
-const port = process.env.PORT || 5000;
-app.listen(port, () => console.log(`Server is running on port ${port}`))
+const port = process.env.PORT || 8080;
+server.listen(port, () => console.log(`Server is running on port ${port}`))
