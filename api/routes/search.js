@@ -159,7 +159,7 @@ router.post('/search', verify, (req, res) => {
                         modified: post.modified.toString(),
                         like: post.likedUser.length.toString(),
                         comment: post.comments.length.toString(),
-                        is_liked: user ? (post.likedUser.includes(user._id) ? "1": "0") : "0",
+                        is_liked: user ? (post.likedUser.includes(user.id) ? "1": "0") : "0",
                         author: post.author ? {
                             id: post.author._id,
                             username: post.author.name,
