@@ -149,24 +149,24 @@ router.post('/search', verify, (req, res) => {
             const data = found_posts.map(post => {
                     return {
                         id: post._id,
-                        image: post.image.map(image => {return image.url}),
+                        image: post.image.length > 0 ? post.image.map(image => { return { id: image._id, url: image.url }; }) : null,
                         video: {
                             url: post.video.url,
                             thumb: post.video.url ? "null": undefined
                         },
+                        described: post.described ? post.described : null,
+                        created: post.created.toString(),
+                        modified: post.modified.toString(),
                         like: post.likedUser.length.toString(),
                         comment: post.comments.length.toString(),
                         is_liked: user ? (post.likedUser.includes(user._id) ? "1": "0") : "0",
                         author: post.author ? {
                             id: post.author._id,
                             username: post.author.name,
-                            avatar: post.author.avatar
+                            avatar: post.author.avatar.url ? post.author.avatar.url : null
                         } : undefined,
-                        described: post.described,
                     }
                 })
-            
-
             return res.json({
                 "code": "1000",
                 "message": "OK",
