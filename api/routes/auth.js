@@ -51,7 +51,8 @@ router.get('/verifyToken', verifyToken, async (req, res) => {
         id: verified.id,
         username: user.name,
         avatar:user.avatar.url ? user.avatar.url : null,
-        active: null
+        active: null,
+        token: token
       }
       return callRes(res, responseError.OK, data);
     });

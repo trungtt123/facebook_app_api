@@ -40,6 +40,7 @@ app.use('/it4788/user', require('./routes/user'));
 app.use('/it4788/chat', require('./routes/chat'));
 _io.on('connection', async (socket) => {
 	console.log('Connected: ' + socket.id);
+    require('./routes/chat')(socket);
     socket.on("disconnect", () => {
         socket.disconnect();
         console.log("🔥: A user disconnected");
