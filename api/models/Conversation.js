@@ -16,7 +16,7 @@ const ConversationSchema = new Schema({
     },
     dialog: [{
         dialogId: {
-            type: String
+            type: Schema.Types.ObjectId
         },
         sender: {
             type: Schema.Types.ObjectId,
