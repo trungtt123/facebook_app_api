@@ -754,17 +754,17 @@ MAXIMUM_NUMBER_OF_IMAGES
 MAX_WORD_POST cua described
 */
 router.post('/edit_post', cpUpload, verify, async (req, res) => {
-    var { id, status, image_del, image_sort, described, auto_accept, auto_block } = req.query;
+    var { id, status, image_del, image_sort, described, auto_accept, auto_block, video_del, videoWidth, videoHeight } = req.query;
     var image, video;
     if (req.files) {
         image = req.files.image;
         video = req.files.video;
     }
     var user = req.user;
-
     if (image_del) {
         try {
             image_del = JSON.parse(image_del);
+            //console.log(image_del);
         } catch (err) {
             console.log("image_del parse loi PARAMETER_TYPE_IS_INVALID");
             return setAndSendResponse(res, responseError.PARAMETER_VALUE_IS_INVALID);
@@ -868,6 +868,20 @@ router.post('/edit_post', cpUpload, verify, async (req, res) => {
 
     let promises, file;
 
+    if(video_del && !video){
+        console.log(video_del);
+        try {
+            if (post.video.url) {
+                console.log("Xoa video 1")
+                await deleteRemoteFile(post.video.filename);
+            }
+        } catch (err) {
+            console.log("Xoa video khong thanh cong 1");
+            return setAndSendResponse(res, responseError.UNKNOWN_ERROR);
+        }
+        post.video = null;
+    }
+
     if (video && !image) {
         if (post.image.length != 0) {
             console.log("Have image and video up video");
@@ -899,15 +913,17 @@ router.post('/edit_post', cpUpload, verify, async (req, res) => {
 
         try {
             if (post.video.url) {
+                console.log("Xoa video 2");
                 await deleteRemoteFile(post.video.filename);
             }
         } catch (err) {
+            console.log("Xoa video khong thanh cong 2");
             return setAndSendResponse(res, responseError.UNKNOWN_ERROR);
         }
 
         try {
             file = await Promise.all(promises);
-            post.video = file[0];
+            post.video = {...file[0], width: videoWidth, height: videoHeight}
         } catch (err) {
             console.log("Upload fail");
             return setAndSendResponse(res, responseError.UPLOAD_FILE_FAILED);
@@ -969,7 +985,7 @@ router.post('/edit_post', cpUpload, verify, async (req, res) => {
     }
 
     try {
-        post.modified = Math.floor(Date.now() / 1000);
+        //post.modified = Math.floor(Date.now() / 1000);
         const savedPost = await post.save();
         return res.status(200).send({
             code: "1000",
