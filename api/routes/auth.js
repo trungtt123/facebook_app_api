@@ -43,14 +43,15 @@ const LCS = require('../utils/LCS');
 
 router.get('/verifyToken', verifyToken, async (req, res) => {
   try {
-    
-    const {token} = req.query;
+
+    const { token } = req.query;
     const verified = jwt.verify(token, process.env.jwtSecret);
     User.findById(verified.id, (err, user) => {
       const data = {
         id: verified.id,
         username: user.name,
-        avatar:user.avatar.url ? user.avatar.url : null,
+        phoneNumber: user.phoneNumber,
+        avatar: user.avatar.url ? user.avatar.url : null,
         active: null,
         token: token
       }
@@ -308,6 +309,7 @@ router.post('/login', async (req, res) => {
               if (err) return callRes(res, responseError.UNKNOWN_ERROR, err.message);
               let data = {
                 id: loginUser.id,
+                phoneNumber: phoneNumber,
                 username: (loginUser.name) ? loginUser.name : null,
                 token: token,
                 avatar: (loginUser.avatar.url) ? loginUser.avatar.url : null,
@@ -327,7 +329,17 @@ router.post('/login', async (req, res) => {
 
 router.post("/change_password", verifyToken, async (req, res) => {
   const { token, password, new_password } = req.query;
-
+  let user;
+  try {
+    user = await User.findById(req.user.id);
+  } catch (err) {
+    console.log("Can not connect to DB");
+    return setAndSendResponse(res, responseError.CAN_NOT_CONNECT_TO_DB);
+  }
+  var isPassword = bcrypt.compareSync(password, user.password);
+  if (!isPassword) {
+    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'password khong dung');
+  }
   if (!password || !new_password) {
     return callRes(res, responseError.PARAMETER_IS_NOT_ENOUGH, 'password, new_password');
   }
@@ -351,18 +363,7 @@ router.post("/change_password", verifyToken, async (req, res) => {
     return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'new_password va password co xau con chung/new_password > 80%');
   }
 
-  let user;
-  try {
-    user = await User.findById(req.user.id);
-  } catch (err) {
-    console.log("Can not connect to DB");
-    return setAndSendResponse(res, responseError.CAN_NOT_CONNECT_TO_DB);
-  }
 
-  var isPassword = bcrypt.compareSync(password, user.password);
-  if (!isPassword) {
-    return callRes(res, responseError.PARAMETER_VALUE_IS_INVALID, 'password khong dung');
-  }
 
   //hash the password before save to DB
   bcrypt.genSalt(10, (err, salt) => {
