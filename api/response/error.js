@@ -30,7 +30,7 @@ var responseError = {
         }
     },
     USER_IS_NOT_VALIDATED: {
-        statusCode: 401,
+        statusCode: 400,
         body: {
             code: "9995",
             message: "User is not validated"
