@@ -80,16 +80,16 @@ module.exports = function (socket) {
                     secondUser: (thisUserId < targetUserId) ? targetUserId : thisUserId
                 });
                 newConversation.save();
-                _io.to(conversationId).emit('server_send_conversation', { message: "OK", data: newConversation });
+                _io.in(conversationId).emit('server_send_conversation', { message: "OK", data: newConversation });
             }
             else {
                 let dialog = boxChat.dialog;
                 for (let i = dialog.length - 1; i >= 0; i--) {
-                    if (dialog[i].sender.toString() === thisUserId) break;
+                    // if (dialog[i].sender.toString() === thisUserId) break;
                     dialog[i].unread = "0";
                 }
                 const dataUpdate = await Conversation.findOneAndUpdate({ conversationId: conversationId }, { dialog: dialog }, { new: true, useFindAndModify: false });
-                _io.to(conversationId).emit('server_send_conversation', { message: "OK", data: dataUpdate });
+                _io.in(conversationId).emit('server_send_conversation', { message: "OK", data: dataUpdate });
             }
         }
         catch (e) {
@@ -280,6 +280,7 @@ module.exports = function (socket) {
                 return;
             }
             const conversationId = (senderId < targetUserId) ? senderId + "_" + targetUserId : targetUserId + "_" + senderId;
+            // socket.join(conversationId);
             let conversation = await Conversation.findOne({ conversationId });
             let dialog = conversation.dialog;
             dialog.push({
@@ -288,7 +289,7 @@ module.exports = function (socket) {
                 created: String(Math.floor(Date.now() / 1000))
             });
             const dataUpdate = await Conversation.findOneAndUpdate({ conversationId: conversationId }, { dialog: dialog }, { new: true, useFindAndModify: false });
-            socket.emit('server_send_conversation', { message: 'OK', data: dataUpdate });
+            _io.in(conversationId).emit('server_send_conversation', { message: 'OK', data: dataUpdate });
         }
         catch (e) {
             console.log(e);
