@@ -85,7 +85,7 @@ module.exports = function (socket) {
             else {
                 let dialog = boxChat.dialog;
                 for (let i = dialog.length - 1; i >= 0; i--) {
-                    // if (dialog[i].sender.toString() === thisUserId) break;
+                    if (dialog[i].sender.toString() === thisUserId) break;
                     dialog[i].unread = "0";
                 }
                 const dataUpdate = await Conversation.findOneAndUpdate({ conversationId: conversationId }, { dialog: dialog }, { new: true, useFindAndModify: false });
@@ -261,6 +261,33 @@ module.exports = function (socket) {
         // res.json({ code, message, data });
     });
     //Not API
+    socket.on('client_leave_conversation', async (data) => {
+        try {
+            const { thisUserId, targetUserId, token } = data;
+            const verifyToken = await verifySocketToken(token);
+            if (!verifyToken) {
+                socket.emit('server_send_conversation', { message: 'failed', reason: 'token invalid' });
+                return;
+            }
+            const verified = jwt.verify(token, process.env.jwtSecret);
+            if (thisUserId !== verified.id) {
+                socket.emit('server_send_conversation', { message: 'failed', reason: 'token invalid' });
+                return;
+            }
+
+            const thisUser = await User.findById(thisUserId);
+            if (thisUser == null) {
+                socket.emit('server_send_conversation', { message: 'failed', reason: 'thisUserId invalid' });
+                return;
+            }
+            const conversationId = (thisUserId < targetUserId) ? thisUserId + "_" + targetUserId : targetUserId + "_" + thisUserId;
+            socket.leave(conversationId);
+        }
+        catch (e) {
+            console.log(e);
+            socket.emit('server_send_conversation', { message: "failed" });
+        }
+    });
     socket.on('client_add_dialog', async (data) => {
         try {
             const { senderId, targetUserId, token, content } = data;
@@ -274,6 +301,7 @@ module.exports = function (socket) {
                 socket.emit('server_send_conversation', { message: 'failed', reason: 'token invalid' });
                 return;
             }
+
             const thisUser = await User.findById(senderId);
             if (thisUser == null) {
                 socket.emit('server_send_conversation', { message: 'failed', reason: 'senderId invalid' });
@@ -281,12 +309,20 @@ module.exports = function (socket) {
             }
             const conversationId = (senderId < targetUserId) ? senderId + "_" + targetUserId : targetUserId + "_" + senderId;
             // socket.join(conversationId);
+
             let conversation = await Conversation.findOne({ conversationId });
             let dialog = conversation.dialog;
+            const numUsers = _io.sockets.adapter.rooms.get(conversationId).size;
+            for (let i = dialog.length - 1; i >= 0; i--) {
+                if (dialog[i].sender.toString() === senderId) break;
+                dialog[i].unread = "0";
+            }
+            console.log('numUsers', numUsers, typeof numUsers);
             dialog.push({
                 sender: senderId,
                 content: content,
-                created: String(Math.floor(Date.now() / 1000))
+                created: String(Math.floor(Date.now() / 1000)),
+                unread: numUsers === 2 ? "0" : "1"
             });
             const dataUpdate = await Conversation.findOneAndUpdate({ conversationId: conversationId }, { dialog: dialog }, { new: true, useFindAndModify: false });
             _io.in(conversationId).emit('server_send_conversation', { message: 'OK', data: dataUpdate });
